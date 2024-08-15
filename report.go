@@ -51,3 +51,32 @@ func (reporter Reporter) Warn(ctx context.Context, message string, err error, ar
 func (reporter Reporter) Critical(ctx context.Context, message string, err error, args ...any) error {
 	return reporter.Report(ctx, LevelCritical, message, err, args...)
 }
+
+// TopLevelReport calls [log/slog.Logger.Log] on the [log/slog.Logger] associated with
+// the [Reporter]. The passed [error] will be logged under the "error" key
+// automatically.
+//
+// If [AlreadyReported] returns true for the [error] and [log/slog.Level]
+// passed into TopLevelReport, TopLevelReport is a no-op.
+func (reporter Reporter) TopLevelReport(ctx context.Context, level slog.Level, message string, err error, args ...any) { //nolint:revive // we're largely just copying slog.Log at this point, this is as succinct as it gets
+	if AlreadyReported(err, level) {
+		return
+	}
+	args = append([]any{"error", err}, args...)
+	reporter.Logger.Log(ctx, level, message, args...)
+}
+
+// TopLevelError calls [Reporter.TopLevelReport] using the [log/slog.LevelError] level.
+func (reporter Reporter) TopLevelError(ctx context.Context, message string, err error, args ...any) {
+	reporter.TopLevelReport(ctx, slog.LevelError, message, err, args...)
+}
+
+// TopLevelWarn calls [Reporter.TopLevelReport] using the [log/slog.LevelWarn] level.
+func (reporter Reporter) TopLevelWarn(ctx context.Context, message string, err error, args ...any) {
+	reporter.TopLevelReport(ctx, slog.LevelWarn, message, err, args...)
+}
+
+// TopLevelCritical calls [Reporter.TopLevelReport] using the [LevelCritical] level.
+func (reporter Reporter) TopLevelCritical(ctx context.Context, message string, err error, args ...any) {
+	reporter.TopLevelReport(ctx, LevelCritical, message, err, args...)
+}
