@@ -31,3 +31,10 @@ func From(ctx context.Context) Reporter {
 		Logger: slog.New(noopHandler{}),
 	}
 }
+
+// Set is a helper function that updates the [log/slog.Logger] on the
+// [Reporter] in the passed [context.Context] to have the passed key value
+// attributes associated with it.
+func Set(ctx context.Context, args ...any) context.Context {
+	return In(ctx, Reporter{Logger: From(ctx).Logger.With(args...)})
+}
