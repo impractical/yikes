@@ -28,7 +28,7 @@ func (reporter Reporter) report(ctx context.Context, level slog.Level, message s
 	}
 	builtinArgs := []any{"error", err}
 	if !reporter.DisableStacktraces {
-		builtinArgs = append(builtinArgs, "stacktrace", getStacktrace())
+		builtinArgs = append(builtinArgs, getStacktrace())
 	}
 	args = append(builtinArgs, args...)
 	reporter.Logger.Log(ctx, level, message, args...)
@@ -71,7 +71,7 @@ func (reporter Reporter) topLevelReport(ctx context.Context, level slog.Level, m
 	}
 	builtinArgs := []any{"error", err}
 	if !reporter.DisableStacktraces {
-		builtinArgs = append(builtinArgs, "stacktrace", getStacktrace())
+		builtinArgs = append(builtinArgs, getStacktrace())
 	}
 	args = append(builtinArgs, args...)
 	reporter.Logger.Log(ctx, level, message, args...)
