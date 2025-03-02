@@ -1,12 +1,12 @@
 package yikes
 
 import (
+	"log/slog"
 	"runtime"
 	"strconv"
-	"strings"
 )
 
-func getStacktrace() string {
+func getStacktrace() slog.Attr {
 	buf := make([]uintptr, 1024)
 	// 0 is runtime.Callers, 1 is getStacktrace, 2 is either report or
 	// topLevelReport, 3 is the exported function of yikes that was called,
@@ -23,15 +23,15 @@ func getStacktrace() string {
 
 	frames := runtime.CallersFrames(buf[:numFrames])
 
-	var out strings.Builder
+	var result []slog.Attr
+	var index int
 	for frame, more := frames.Next(); more; frame, more = frames.Next() {
-		out.WriteString(frame.Function)
-		out.WriteString("\n\t")
-		out.WriteString(frame.File)
-		out.WriteString(":")
-		out.WriteString(strconv.FormatInt(int64(frame.Line), 10))
-		out.WriteString("\n")
+		result = append(result, slog.Group(strconv.Itoa(index),
+			slog.String("function", frame.Function),
+			slog.String("file", frame.File),
+			slog.Int("line", frame.Line),
+		))
 	}
 
-	return strings.TrimSuffix(out.String(), "\n")
+	return slog.Any("stacktrace", slog.GroupValue(result...))
 }
