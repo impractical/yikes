@@ -31,6 +31,7 @@ func getStacktrace() slog.Attr {
 			slog.String("file", frame.File),
 			slog.Int("line", frame.Line),
 		))
+		index++
 	}
 
 	return slog.Any("stacktrace", slog.GroupValue(result...))
