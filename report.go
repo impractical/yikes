@@ -13,8 +13,29 @@ type Reporter struct {
 	//
 	// If you plan to use [Reporter.Critical], the Logger should already be
 	// configured to map the string value of [LevelCritical], or it'll show
-	// up as "ERROR+8".
+	// up as "ERROR+8". You can use [ReplaceAttrLevelCritical] to achieve
+	// this.
 	Logger *slog.Logger
+
+	// DisableStacktraces, if set to true, stops stacktraces from being
+	// generated and added as values to the error reports.
+	DisableStacktraces bool
+}
+
+func (reporter Reporter) report(ctx context.Context, level slog.Level, message string, err error, args ...any) error { //nolint:revive // we're largely just copying slog.Log at this point, this is as succinct as it gets
+	if AlreadyReported(err, level) {
+		return err
+	}
+	builtinArgs := []any{"error", err}
+	if !reporter.DisableStacktraces {
+		builtinArgs = append(builtinArgs, "stacktrace", getStacktrace())
+	}
+	args = append(builtinArgs, args...)
+	reporter.Logger.Log(ctx, level, message, args...)
+	return reportedError{
+		level: level,
+		error: err,
+	}
 }
 
 // Report calls [log/slog.Logger.Log] on the [log/slog.Logger] associated with
@@ -26,30 +47,34 @@ type Reporter struct {
 // passed into Report, Report returns the [error] as it was passed in and takes
 // no further actions.
 func (reporter Reporter) Report(ctx context.Context, level slog.Level, message string, err error, args ...any) error { //nolint:revive // we're largely just copying slog.Log at this point, this is as succinct as it gets
-	if AlreadyReported(err, level) {
-		return err
-	}
-	args = append([]any{"error", err}, args...)
-	reporter.Logger.Log(ctx, level, message, args...)
-	return reportedError{
-		level: level,
-		error: err,
-	}
+	return reporter.report(ctx, level, message, err, args...)
 }
 
 // Error calls [Reporter.Report] using the [log/slog.LevelError] level.
 func (reporter Reporter) Error(ctx context.Context, message string, err error, args ...any) error {
-	return reporter.Report(ctx, slog.LevelError, message, err, args...)
+	return reporter.report(ctx, slog.LevelError, message, err, args...)
 }
 
 // Warn calls [Reporter.Report] using the [log/slog.LevelWarn] level.
 func (reporter Reporter) Warn(ctx context.Context, message string, err error, args ...any) error {
-	return reporter.Report(ctx, slog.LevelWarn, message, err, args...)
+	return reporter.report(ctx, slog.LevelWarn, message, err, args...)
 }
 
 // Critical calls [Reporter.Report] using the [LevelCritical] level.
 func (reporter Reporter) Critical(ctx context.Context, message string, err error, args ...any) error {
-	return reporter.Report(ctx, LevelCritical, message, err, args...)
+	return reporter.report(ctx, LevelCritical, message, err, args...)
+}
+
+func (reporter Reporter) topLevelReport(ctx context.Context, level slog.Level, message string, err error, args ...any) { //nolint:revive // we're largely just copying slog.Log at this point, this is as succinct as it gets
+	if AlreadyReported(err, level) {
+		return
+	}
+	builtinArgs := []any{"error", err}
+	if !reporter.DisableStacktraces {
+		builtinArgs = append(builtinArgs, "stacktrace", getStacktrace())
+	}
+	args = append(builtinArgs, args...)
+	reporter.Logger.Log(ctx, level, message, args...)
 }
 
 // TopLevelReport calls [log/slog.Logger.Log] on the [log/slog.Logger] associated with
@@ -59,24 +84,20 @@ func (reporter Reporter) Critical(ctx context.Context, message string, err error
 // If [AlreadyReported] returns true for the [error] and [log/slog.Level]
 // passed into TopLevelReport, TopLevelReport is a no-op.
 func (reporter Reporter) TopLevelReport(ctx context.Context, level slog.Level, message string, err error, args ...any) { //nolint:revive // we're largely just copying slog.Log at this point, this is as succinct as it gets
-	if AlreadyReported(err, level) {
-		return
-	}
-	args = append([]any{"error", err}, args...)
-	reporter.Logger.Log(ctx, level, message, args...)
+	reporter.topLevelReport(ctx, level, message, err, args...)
 }
 
 // TopLevelError calls [Reporter.TopLevelReport] using the [log/slog.LevelError] level.
 func (reporter Reporter) TopLevelError(ctx context.Context, message string, err error, args ...any) {
-	reporter.TopLevelReport(ctx, slog.LevelError, message, err, args...)
+	reporter.topLevelReport(ctx, slog.LevelError, message, err, args...)
 }
 
 // TopLevelWarn calls [Reporter.TopLevelReport] using the [log/slog.LevelWarn] level.
 func (reporter Reporter) TopLevelWarn(ctx context.Context, message string, err error, args ...any) {
-	reporter.TopLevelReport(ctx, slog.LevelWarn, message, err, args...)
+	reporter.topLevelReport(ctx, slog.LevelWarn, message, err, args...)
 }
 
 // TopLevelCritical calls [Reporter.TopLevelReport] using the [LevelCritical] level.
 func (reporter Reporter) TopLevelCritical(ctx context.Context, message string, err error, args ...any) {
-	reporter.TopLevelReport(ctx, LevelCritical, message, err, args...)
+	reporter.topLevelReport(ctx, LevelCritical, message, err, args...)
 }
