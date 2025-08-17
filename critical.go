@@ -19,12 +19,12 @@ const (
 // replace the Critical level that yikes supports with the label provided, so
 // it doesn't show up as err+8 in logs.
 func ReplaceAttrLevelCritical(label string) func(groups []string, attr slog.Attr) slog.Attr {
-	return func(groups []string, attr slog.Attr) slog.Attr {
+	return func(_ []string, attr slog.Attr) slog.Attr {
 		if attr.Key != slog.LevelKey {
 			return attr
 		}
-		level := attr.Value.Any().(slog.Level)
-		if level == LevelCritical {
+		level, ok := attr.Value.Any().(slog.Level)
+		if ok && level == LevelCritical {
 			attr.Value = slog.StringValue(label)
 		}
 		return attr

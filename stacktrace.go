@@ -7,7 +7,7 @@ import (
 )
 
 func getStacktrace() slog.Attr {
-	buf := make([]uintptr, 1024)
+	buf := make([]uintptr, 1024) //nolint:mnd // a kilobyte ought to be enough for anyone
 	// 0 is runtime.Callers, 1 is getStacktrace, 2 is either report or
 	// topLevelReport, 3 is the exported function of yikes that was called,
 	// 4 is the caller.
@@ -18,7 +18,7 @@ func getStacktrace() slog.Attr {
 		if numFrames < len(buf) {
 			break
 		}
-		buf = make([]uintptr, len(buf)*2)
+		buf = make([]uintptr, len(buf)*2) //nolint:mnd // if it's not, just double it
 	}
 
 	frames := runtime.CallersFrames(buf[:numFrames])
